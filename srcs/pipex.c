@@ -91,27 +91,6 @@ char	*get_path(char *program_name, char **envp)
 	return (path);
 }
 
-void	infile(int io[2], int pipes[2][2])
-{
-	dup2(io[0], STDIN);
-	dup2(pipes[0][WRITE], STDOUT);
-}
-
-void	outfile(int i, int io[2], int pipes[2][2])
-{
-	if (i % 2)
-	{
-		close(pipes[0][WRITE]);
-		dup2(pipes[0][READ], STDIN);
-	}
-	else
-	{
-		close(pipes[1][WRITE]);
-		dup2(pipes[1][READ], STDIN);
-	}
-	dup2(io[1], STDOUT);
-}
-
 int	child(int i, int max, int io[2], int ends[2])
 {
 	if (i == 0)
@@ -143,20 +122,36 @@ int	execute(int i, int max, int io[2], int ends[2])
 	return (0);
 }
 
-static int	run_pipeline(int ncmds, char ***cmds)
+static int	exec_nth_command(int ncmds, char ***cmds, char **envp)
 {
 	pid_t	pid;
+	int		input[2];
 
-	pid = fork();
-	if (pid < 0)
-		err_msg("Failed to fork");
-	else if (pid == 0)
-		exec_nth_command(ncmds, cmds);
-	else
-		if (WIFEXITED(status))
-			return (WEXITSTATUS(status));
-		else
-			return (0);
+    if (ncmds < 1)
+		return ;
+    if (ncmds > 1) {
+        if (pipe(input) != 0)
+            err_sysexit("Failed to create pipe");
+        if ((pid = fork()) < 0)
+            err_sysexit("Failed to fork");
+        if (pid == 0 && ncmds > 1)
+            exec_previous_command(ncmds - 1, cmds, input);
+		wait(&pid);
+        dup2(input[0], 0);
+        close(input[0]);
+        close(input[1]);
+    }
+    execve(get_path(cmds[ncmds - 1][0]), cmds[ncmds - 1], envp);
+    err_sysexit("Failed to exec %s", cmds[ncmds - 1][0]);
+}
+
+/* Fix stdout to write end of pipe
+ * then calls nth-1 cmd*/
+static void exec_previous_command(int ncmds, char ***cmds, Pipe output) {
+    dup2(output[1], 1);
+    close(output[0]);
+    close(output[1]);
+    exec_nth_command(ncmds, cmds);
 }
 
 static int check_io(int io[2], char *infile, char *outfile)
@@ -171,16 +166,18 @@ static int check_io(int io[2], char *infile, char *outfile)
 int	main(int ac, char **av, char **envp)
 {
 	char	***cmds = [ac - 3];
+	int		ncmds;
 
 	if (ac < 5)
 		return (err_msg("Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile"));
 	if (check_io(io, av[1], av[ac - 1]))
 		return (1);
 	ncmds = ac - 4;
+	//malloc cmds;
 	i = -1
 	while (++i < ncds)
 		cmds[i] = ft_split(av[i + 2], ' ');
-	return (run_pipeline(ncmds, cmds));
+	return (exec_nth_cmd(ncmds, cmds, envp));
 }
 
 /*
