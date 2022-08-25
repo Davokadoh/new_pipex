@@ -6,7 +6,7 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/07/22 13:41:41 by jleroux           #+#    #+#             */
-/*   Updated: 2022/07/22 14:13:24 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/25 17:58:27 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,10 @@ void	ft_putendl_fd(char *s, int fd);
 void	ft_putendl(char *s);
 
 void	ft_putnbr_fd(int n, int fd);
+
+char	*ft_append(char *s1, char *s2);
+
+void	ft_free_tab(char **tab);
 
 typedef struct s_list
 {

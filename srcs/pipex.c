@@ -35,24 +35,6 @@ void	free_tab(char **tab)
 	free(tab);
 }
 
-void	ft_free(char *str)
-{
-	if (str)
-		free(str);
-}
-
-void	free_all(char **new_av, char *path)
-{
-	free_tab(new_av);
-	ft_free(path);
-}
-
-int	free_all_error(char **new_av, char *path, int error_code)
-{
-	free_all(new_av, path);
-	return (error_code);
-}
-
 int	path_error(char **paths, int i)
 {
 	if (!paths[i])
@@ -64,7 +46,7 @@ int	path_error(char **paths, int i)
 	return (0);
 }
 
-char	*get_path(char *program_name, char **envp)
+static char	*get_path(char *program_name, char **envp)
 {
 	int		i;
 	char	*path;
@@ -91,67 +73,38 @@ char	*get_path(char *program_name, char **envp)
 	return (path);
 }
 
-int	child(int i, int max, int io[2], int ends[2])
-{
-	if (i == 0)
-		infile();
-	else if (i = max - 4)
-		outfile();
-	dup2(input[0], 0);
-	close(ends[0]);
-	close(ends[1]);
-	return (1);
-}
-
-int	execute(int i, int max, int io[2], int ends[2])
-{
-	pid_t	pid;
-	int		status;
-
-	pid = fork();
-	if (pid == -1)
-		return (-1);
-	if (pid == 0)
-		return (child(i, max, io, ends)); //Should return 1
-	waitpid(pid, &status, 0);
-    dup2(ends[1], 1);
-    close(ends[0]);
-    close(ends[1]);
-	if (WIFEXITED(status))
-		return (WEXITSTATUS(status));
-	return (0);
-}
-
 static int	exec_nth_command(int ncmds, char ***cmds, char **envp)
 {
 	pid_t	pid;
+	int		status;
 	int		input[2];
 
-    if (ncmds < 1)
-		return ;
-    if (ncmds > 1) {
+    if (ncmds < 0)
+		return (1);
+    if (ncmds >= 0) {
         if (pipe(input) != 0)
             err_sysexit("Failed to create pipe");
         if ((pid = fork()) < 0)
             err_sysexit("Failed to fork");
         if (pid == 0 && ncmds > 1)
-            exec_previous_command(ncmds - 1, cmds, input);
+            exec_previous_command(ncmds, cmds, input);
 		wait(&pid);
         dup2(input[0], 0);
         close(input[0]);
         close(input[1]);
     }
-    execve(get_path(cmds[ncmds - 1][0]), cmds[ncmds - 1], envp);
-    err_sysexit("Failed to exec %s", cmds[ncmds - 1][0]);
+    if (execve(get_path(cmds[ncmds][0]), cmds[ncmds], envp) == -1)
+	    err_sysexit("Failed to exec %s", cmds[ncmds][0]);
+	if (WIFEXITED(status))
+		return (WEXITSTATUS(status));
+	return (1);
 }
 
-/* Fix stdout to write end of pipe
- * then calls nth-1 cmd*/
-static void exec_previous_command(int ncmds, char ***cmds, Pipe output) {
+static void exec_previous_command(int ncmds, char ***cmds, char **envp, int output[2]) {
     dup2(output[1], 1);
     close(output[0]);
     close(output[1]);
-    exec_nth_command(ncmds, cmds);
+    exec_nth_command(ncmds - 1, cmds, envp);
 }
 
 static int check_io(int io[2], char *infile, char *outfile)
@@ -179,44 +132,3 @@ int	main(int ac, char **av, char **envp)
 		cmds[i] = ft_split(av[i + 2], ' ');
 	return (exec_nth_cmd(ncmds, cmds, envp));
 }
-
-/*
-int	main(int ac, char **av, char **envp)
-{
-	int		i;
-	char	*path;
-	char	**new_av;
-	int		io[2];
-	int		ends[2];
-	int		status;
-
-	status = 1;
-	if (ac < 5)
-		return (1);
-	if (check_io(io, av[1], av[ac - 1]))
-		return (1);
-	i = -1;
-	while (++i < ac - 3)
-	{
-		if (pipe(ends) == -1)
-			return (1);
-		new_av = ft_split(av[i + 2], ' ');
-		if (!new_av || !*new_av || !**new_av)
-			return (free_all_error(new_av, path, 1));
-		path = get_path(new_av[0], envp);
-		if (!path || !*path)
-			return (free_all_error(new_av, path, 1));
-		status = execute(i, ac, io, ends);
-		if (status)
-			if (execve(path, new_av, envp) == -1)
-			{
-				perror(NULL);
-				return(free_all_error(new_av, path, 1));
-			}
-		free_all(new_av, path);
-	}
-	close(io[0]);
-	close(io[1]);
-	return (status);
-}
-*/
