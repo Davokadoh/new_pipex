@@ -6,7 +6,7 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/08/26 11:09:08 by jleroux           #+#    #+#             */
-/*   Updated: 2022/08/26 15:23:48 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/26 15:31:18 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,6 @@ static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2]);
 static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 {
 	pid_t	pid;
-	//int		status;
 	int		input[2];
 
 	if (pipe(input) != 0)
@@ -84,7 +83,6 @@ static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 		if (exec_nth_cmd(ncmds - 1, cmds, envp, io) == 127)
 			return ;
 	}
-	//waitpid(pid, &status, 0);
 	dup2(input[0], STDIN);
 	close(input[0]);
 	close(input[1]);
@@ -125,17 +123,18 @@ int	main(int ac, char **av, char **envp)
 	int		io[2];
 	int		i;
 
-	if (ac < 5)
+	if (ac != 5)
 		err_msg_exit(
 			"Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile\n");
-	check_io(io, av[1], av[ac - 1]);
+	if (check_io(io, av[1], av[ac - 1]) == 1)
+		return (1);
 	cmds = malloc((ac - 3) * sizeof(char ***));
 	i = -1;
 	while (++i < ac - 3)
 		cmds[i] = ft_split(av[i + 2], ' ');
-	pid = fork();
 	if (dup2(io[1], STDOUT) == -1)
 		return (1);
+	pid = fork();
 	if (pid == 0)
 		return (exec_nth_cmd(ac - 4, cmds, envp, io));
 	waitpid(pid, &status, 0);
