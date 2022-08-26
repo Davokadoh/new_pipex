@@ -6,7 +6,7 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/08/26 11:09:08 by jleroux           #+#    #+#             */
-/*   Updated: 2022/08/26 14:25:21 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/26 15:23:48 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,15 +22,15 @@
 static void	err_msg_exit(char *msg)
 {
 	write(2, msg, ft_strlen(msg));
-	exit(1);
+	exit(127);
 }
 
 static int	path_error(char **paths, int i)
 {
 	if (!paths[i])
 	{
-		perror("command not found");
 		ft_free_tab(paths);
+		err_msg_exit("command not found");
 		return (1);
 	}
 	return (0);
@@ -81,7 +81,8 @@ static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 		dup2(input[1], STDOUT);
 		close(input[0]);
 		close(input[1]);
-		exec_nth_cmd(ncmds - 1, cmds, envp, io);
+		if (exec_nth_cmd(ncmds - 1, cmds, envp, io) == 127)
+			return ;
 	}
 	//waitpid(pid, &status, 0);
 	dup2(input[0], STDIN);
@@ -95,9 +96,11 @@ static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 		dup2(io[0], STDIN);
 	if (ncmds > 0)
 		exec_prev_cmd(ncmds, cmds, envp, io);
-	if (execve(get_path(cmds[ncmds][0], envp),
-		cmds[ncmds], envp) == -1)
-		err_msg_exit("Failed on exec\n");
+	if (execve(get_path(cmds[ncmds][0], envp), cmds[ncmds], envp) == -1)
+	{
+		perror(NULL);
+		return (127);
+	}
 	return (1);
 }
 
@@ -125,8 +128,7 @@ int	main(int ac, char **av, char **envp)
 	if (ac < 5)
 		err_msg_exit(
 			"Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile\n");
-	if (check_io(io, av[1], av[ac - 1]))
-		return (1);
+	check_io(io, av[1], av[ac - 1]);
 	cmds = malloc((ac - 3) * sizeof(char ***));
 	i = -1;
 	while (++i < ac - 3)
