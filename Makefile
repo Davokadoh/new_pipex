@@ -1,12 +1,13 @@
 CFLAGS 			=	-Wall -Wextra -Werror #-fsanitize=address
 TARGET 			=	pipex
 SRCS_DIR 		=	./srcs
-OBJS_DIR 		=	.
+OBJS_DIR 		=	./objs
 LIBFT_DIR		=	./libft
 INCLUDES_DIRS	=	./includes $(LIBFT_DIR)
 INCLUDES		=	$(addprefix -I,$(INCLUDES_DIRS))
 LIBS			=	$(LIBFT_DIR)/libft.a
 _SRCS 			=	pipex.c \
+					path.c
 
 OBJS_BONUS = $(patsubst %.c, $(OBJS_DIR)/%.o, $(_SRCS_BONUS))
 	
@@ -20,6 +21,7 @@ all: $(TARGET)
 clean:
 	$(MAKE) -C $(LIBFT_DIR) clean
 	rm -f $(OBJS) $(OBJS_BONUS)
+	rmdir $(OBJS_DIR)
 
 fclean: clean
 	$(MAKE) -C $(LIBFT_DIR) fclean
