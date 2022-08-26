@@ -6,7 +6,7 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/08/26 11:09:08 by jleroux           #+#    #+#             */
-/*   Updated: 2022/08/26 13:59:15 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/26 14:25:21 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,7 @@ static int	path_error(char **paths, int i)
 {
 	if (!paths[i])
 	{
-		perror("path error");
+		perror("command not found");
 		ft_free_tab(paths);
 		return (1);
 	}
@@ -68,7 +68,7 @@ static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2]);
 static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 {
 	pid_t	pid;
-	int		status;
+	//int		status;
 	int		input[2];
 
 	if (pipe(input) != 0)
@@ -83,7 +83,7 @@ static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 		close(input[1]);
 		exec_nth_cmd(ncmds - 1, cmds, envp, io);
 	}
-	waitpid(pid, &status, 0);
+	//waitpid(pid, &status, 0);
 	dup2(input[0], STDIN);
 	close(input[0]);
 	close(input[1]);
@@ -91,10 +91,10 @@ static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 
 static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 {
+	if (ncmds == 0)
+		dup2(io[0], STDIN);
 	if (ncmds > 0)
 		exec_prev_cmd(ncmds, cmds, envp, io);
-	if (ncmds == 0)
-		dup2(io[0], 0);
 	if (execve(get_path(cmds[ncmds][0], envp),
 		cmds[ncmds], envp) == -1)
 		err_msg_exit("Failed on exec\n");
@@ -104,8 +104,12 @@ static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 static int	check_io(int io[2], char *infile, char *outfile)
 {
 	io[0] = open(infile, O_RDONLY);
+	if (io[0] == -1)
+		perror(infile);
 	io[1] = open(outfile, O_CREAT | O_RDWR | O_TRUNC, 0644);
-	if (io[0] == -1 | io[1] == -1)
+	if (io[1] == -1)
+		perror(outfile);
+	if (io[0] == -1 || io[1] == -1)
 		return (1);
 	return (0);
 }
@@ -121,9 +125,8 @@ int	main(int ac, char **av, char **envp)
 	if (ac < 5)
 		err_msg_exit(
 			"Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile\n");
-	if (check_io(io, av[1], av[ac - 1]) == -1)
+	if (check_io(io, av[1], av[ac - 1]))
 		return (1);
-	//close(io[0]);
 	cmds = malloc((ac - 3) * sizeof(char ***));
 	i = -1;
 	while (++i < ac - 3)
@@ -137,6 +140,7 @@ int	main(int ac, char **av, char **envp)
 	i = -1;
 	while (++i < ac - 3)
 		ft_free_tab(cmds[i]);
+	free(cmds);
 	if (WIFEXITED(status))
 		return (WEXITSTATUS(status));
 	return (0);
