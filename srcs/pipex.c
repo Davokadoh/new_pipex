@@ -6,7 +6,7 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/08/26 11:09:08 by jleroux           #+#    #+#             */
-/*   Updated: 2022/08/26 12:47:12 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/26 13:59:15 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,35 +63,38 @@ static char	*get_path(char *program_name, char **envp)
 	return (path);
 }
 
-static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2])
+static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2]);
+
+static void	exec_prev_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 {
 	pid_t	pid;
 	int		status;
 	int		input[2];
-	int		output[2];
 
-	if (ncmds > 0)
+	if (pipe(input) != 0)
+		err_msg_exit("Failed to create pipe\n");
+	pid = fork();
+	if (pid < 0)
+		err_msg_exit("Failed to fork\n");
+	if (pid == 0 && ncmds > 0)
 	{
-		if (pipe(input) != 0)
-			err_msg_exit("Failed to create pipe\n");
-		pid = fork();
-		if (pid < 0)
-			err_msg_exit("Failed to fork\n");
-		if (pid == 0 && ncmds > 0)
-		{
-			dup2(output[1], STDOUT);
-			close(output[0]);
-			close(output[1]);
-			exec_nth_cmd(ncmds - 1, cmds, envp, io);
-		}
-		waitpid(pid, &status, 0);
-		dup2(input[0], STDIN);
+		dup2(input[1], STDOUT);
 		close(input[0]);
 		close(input[1]);
+		exec_nth_cmd(ncmds - 1, cmds, envp, io);
 	}
+	waitpid(pid, &status, 0);
+	dup2(input[0], STDIN);
+	close(input[0]);
+	close(input[1]);
+}
+
+static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2])
+{
+	if (ncmds > 0)
+		exec_prev_cmd(ncmds, cmds, envp, io);
 	if (ncmds == 0)
 		dup2(io[0], 0);
-	fprintf(stderr, "%s\n", get_path(cmds[ncmds][0], envp));
 	if (execve(get_path(cmds[ncmds][0], envp),
 		cmds[ncmds], envp) == -1)
 		err_msg_exit("Failed on exec\n");
