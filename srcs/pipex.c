@@ -9,38 +9,20 @@
 #define READ 0
 #define WRITE 1
 
-char	*ft_append(char *s1, char *s2)
-{
-	char	*str;
 
-	if (!s1 || !s2)
-		return (NULL);
-	str = (char *) malloc((ft_strlen(s1) + ft_strlen(s2)) * sizeof(*s1));
-	if (!str)
-		return (NULL);
-	ft_strlcpy(str, s1, ft_strlen(s1) + 1);
-	ft_strlcpy(str + ft_strlen(s1), s2, ft_strlen(s2) + 1);
-	free(s1);
-	return (str);
+static void err_msg_exit(char *msg)
+{
+	perror(msg);
+	exit(1);
 }
 
-void	free_tab(char **tab)
-{
-	int	i;
-
-	i = -1;
-	while (tab[++i])
-		if (tab[i])
-			free(tab[i]);
-	free(tab);
-}
 
 int	path_error(char **paths, int i)
 {
 	if (!paths[i])
 	{
 		perror("path error");
-		free_tab(paths);
+		ft_free_tab(paths);
 		return (1);
 	}
 	return (0);
@@ -69,11 +51,13 @@ static char	*get_path(char *program_name, char **envp)
 	if (path_error(paths, i))
 		return (NULL);
 	path = ft_strdup(paths[i]);
-	free_tab(paths);
+	ft_free_tab(paths);
 	return (path);
 }
 
-static int	exec_nth_command(int ncmds, char ***cmds, char **envp)
+static void exec_prev_cmd(int ncmds, char ***cmds, char **envp, int output[2], int io[2]);
+
+static int	exec_nth_cmd(int ncmds, char ***cmds, char **envp, int io[2])
 {
 	pid_t	pid;
 	int		status;
@@ -83,28 +67,36 @@ static int	exec_nth_command(int ncmds, char ***cmds, char **envp)
 		return (1);
     if (ncmds >= 0) {
         if (pipe(input) != 0)
-            err_sysexit("Failed to create pipe");
+            err_msg_exit("Failed to create pipe");
         if ((pid = fork()) < 0)
-            err_sysexit("Failed to fork");
+            err_msg_exit("Failed to fork");
         if (pid == 0 && ncmds > 1)
-            exec_previous_command(ncmds, cmds, input);
-		wait(&pid);
-        dup2(input[0], 0);
+            exec_prev_cmd(ncmds, cmds, envp, input, io);
+		waitpid(pid, &status, 0);
+		if (ncmds == 0)
+		{
+			fprintf(stderr, "io[0] = %d\n", io[0]);
+			dup2(input[0], io[0]);
+			fprintf(stderr, "test\n");
+		}
+		else
+			dup2(input[0], 0);
         close(input[0]);
         close(input[1]);
     }
-    if (execve(get_path(cmds[ncmds][0]), cmds[ncmds], envp) == -1)
-	    err_sysexit("Failed to exec %s", cmds[ncmds][0]);
+    if (execve(get_path(cmds[ncmds][0], envp), cmds[ncmds], envp) == -1)
+	    err_msg_exit("Failed on exec");
 	if (WIFEXITED(status))
 		return (WEXITSTATUS(status));
 	return (1);
 }
 
-static void exec_previous_command(int ncmds, char ***cmds, char **envp, int output[2]) {
+static void exec_prev_cmd(int ncmds, char ***cmds, char **envp, int output[2], int io[2]) {
     dup2(output[1], 1);
     close(output[0]);
     close(output[1]);
-    exec_nth_command(ncmds - 1, cmds, envp);
+	fprintf(stderr, "test\n");
+    exec_nth_cmd(ncmds - 1, cmds, envp, io);
 }
 
 static int check_io(int io[2], char *infile, char *outfile)
@@ -118,17 +110,19 @@ static int check_io(int io[2], char *infile, char *outfile)
 
 int	main(int ac, char **av, char **envp)
 {
-	char	***cmds = [ac - 3];
+	char	**cmds[ac - 3];
 	int		ncmds;
+	int		io[2];
+	int		i;
 
 	if (ac < 5)
-		return (err_msg("Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile"));
+		err_msg_exit("Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile");
 	if (check_io(io, av[1], av[ac - 1]))
 		return (1);
 	ncmds = ac - 4;
 	//malloc cmds;
-	i = -1
-	while (++i < ncds)
+	i = -1;
+	while (++i < ncmds)
 		cmds[i] = ft_split(av[i + 2], ' ');
-	return (exec_nth_cmd(ncmds, cmds, envp));
+	return (exec_nth_cmd(ncmds, cmds, envp, io));
 }
