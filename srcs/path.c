@@ -6,13 +6,12 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/08/26 15:39:18 by jleroux           #+#    #+#             */
-/*   Updated: 2022/08/26 16:01:59 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/26 16:35:25 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "libft.h"
 #include "pipex.h"
-#include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
