@@ -8,6 +8,8 @@ INCLUDES		=	$(addprefix -I,$(INCLUDES_DIRS))
 LIBS			=	$(LIBFT_DIR)/libft.a
 _SRCS 			=	pipex.c \
 					path.c
+_SRCS_BONUS		=	pipex_bonus.c \
+					path.c
 
 OBJS_BONUS = $(patsubst %.c, $(OBJS_DIR)/%.o, $(_SRCS_BONUS))
 	
@@ -17,6 +19,10 @@ SRCS = $(patsubst %, $(SRCS_DIR)/%, $(_SRCS))
 .PHONY : all clean fclean re bonus test norminette
 
 all: $(TARGET)
+
+bonus: $(LIBFT_DIR)/libft.a $(OBJS_BONUS)
+	$(MAKE) -C $(LIBFT_DIR)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS_BONUS) $(LIBS)
 
 clean:
 	$(MAKE) -C $(LIBFT_DIR) clean

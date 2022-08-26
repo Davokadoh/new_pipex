@@ -6,7 +6,7 @@
 /*   By: jleroux <marvin@42lausanne.ch>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/08/26 11:09:08 by jleroux           #+#    #+#             */
-/*   Updated: 2022/08/26 16:12:02 by jleroux          ###   ########.fr       */
+/*   Updated: 2022/08/26 16:14:25 by jleroux          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ int	main(int ac, char **av, char **envp)
 	int		io[2];
 	int		i;
 
-	if (ac != 5)
+	if (ac < 5)
 		err_msg_exit(
 			"Usage: ./pipex infile \"cmd1 args[]\" \"cmd2 args[]\" outfile\n");
 	if (check_io(io, av[1], av[ac - 1]) == 1)
